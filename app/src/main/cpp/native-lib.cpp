@@ -44,6 +44,13 @@ Java_com_wzjing_videoclipper_MainActivity_remuxVideo(JNIEnv *env, jobject instan
     env->ReleaseStringUTFChars(outFileName_, outFileName);
 }
 
+
+/**
+ * 打印 Packet 对象详细信息
+ * @param fmt_ctx   输出的AVFormatContext对象
+ * @param pkt       AVPacket指针
+ * @param tag       标签(输入in或者输出out)
+ */
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const char *tag)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
