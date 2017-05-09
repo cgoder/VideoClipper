@@ -16,10 +16,6 @@ extern "C" {
 #define LOGI(format, ...) __android_log_print(ANDROID_LOG_INFO, TAG, format, ## __VA_ARGS__)
 #define LOGE(format, ...) __android_log_print(ANDROID_LOG_ERROR, TAG, format, ## __VA_ARGS__)
 
-enum LOG_LEVEL {
-    D = ANDROID_LOG_DEBUG, I = ANDROID_LOG_INFO, E = ANDROID_LOG_ERROR
-};
-
 extern "C"
 {
 

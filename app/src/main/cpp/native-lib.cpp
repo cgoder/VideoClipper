@@ -474,11 +474,13 @@ int remuxing(const char *in_filename, const char *out_filename)
     return 0;
 }
 
-void error(int error_code ){
+void error(int error_code)
+{
     __android_log_print(ANDROID_LOG_ERROR, TAG, "Error detail: %s", av_err2str(error_code));
 }
 
-void toast(JNIEnv* env, jobject instance, const char* message){
+void toast(JNIEnv* env, jobject instance, const char* message)
+{
     jclass jc = env->GetObjectClass(instance);
     jmethodID jmID = env->GetMethodID(jc, "toast", "(Ljava/lang/String;)V");
     jstring _message = env->NewStringUTF(message);
