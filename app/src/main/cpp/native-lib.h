@@ -20,7 +20,8 @@ enum LOG_LEVEL {
     D = ANDROID_LOG_DEBUG, I = ANDROID_LOG_INFO, E = ANDROID_LOG_ERROR
 };
 
-extern "C" {
+extern "C"
+{
 
 JNIEXPORT void JNICALL
 Java_com_wzjing_videoclipper_MainActivity_clipVideo(JNIEnv *env, jobject instance,
@@ -33,9 +34,14 @@ Java_com_wzjing_videoclipper_MainActivity_remuxVideo(JNIEnv *env, jobject instan
 
 int cut_video(double starttime, double endtime, const char *in_filename, const char *out_filename);
 
+int convert_and_cut(float starttime, float endtime, char *in_filename, char *out_filename);
+
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const char *tag);
 
 int remuxing(const char *in_filename, const char *out_filename);
+
 void error(int error_code);
+
 void toast(JNIEnv* env, jobject instance, const char* message);
+
 };

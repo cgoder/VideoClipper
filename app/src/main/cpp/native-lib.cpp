@@ -64,13 +64,13 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, cons
 
 /**
  * 根据起始时间裁剪一段视频
- * @param from_seconds  开始时间
- * @param end_seconds   结束时间
+ * @param starttime  开始时间
+ * @param endtime   结束时间
  * @param in_filename   原视频的路径(包含文件名)
  * @param out_filename  裁剪结果的存放路径(包含文件名)
- * @return
+ * @return  如果成功则返回0，否则返回其他
  */
-int cut_video(double from_seconds, double end_seconds, const char* in_filename, const char* out_filename)
+int cut_video(double starttime, double endtime, const char* in_filename, const char* out_filename)
 {
     LOGI("%s", "Start cut video");
     AVOutputFormat *outputFormat = NULL;
@@ -153,7 +153,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
 
     //8、定位当前位置到裁剪的起始位置 from_seconds
     LOGI("%s", "定位当前位置到裁剪的起始位置 from_seconds");
-    return_code = av_seek_frame(inFormatContext, -1, (int64_t)(from_seconds*AV_TIME_BASE), AVSEEK_FLAG_ANY);
+    return_code = av_seek_frame(inFormatContext, -1, (int64_t)(starttime*AV_TIME_BASE), AVSEEK_FLAG_ANY);
     if (return_code < 0) {
         LOGE("%s", "Error seek to the start\n");
         error(return_code);
@@ -184,7 +184,7 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
         log_packet(inFormatContext, &packet, "in");
 
         //av_q2d转换AVRational(包含分子分母的结构)类型为double,此过程有损
-        if (av_q2d(in_stream->time_base) * packet.pts > end_seconds) {
+        if (av_q2d(in_stream->time_base) * packet.pts > endtime) {
             //当前的时间大于转换时间，则转换完成
             LOGI("%s", "到达截止时间点");
             av_packet_unref(&packet);
@@ -193,11 +193,11 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
 
         if (dts_start_from[packet.stream_index] == 0) {
             dts_start_from[packet.stream_index] = packet.dts;
-            __android_log_print(ANDROID_LOG_INFO, TAG, "dts_start_from: %s", av_ts2str(dts_start_from[packet.stream_index]));
+            __android_log_print(ANDROID_LOG_INFO, TAG, "dts_start_from: %d", av_ts2str(dts_start_from[packet.stream_index]));
         }
         if (pts_start_from[packet.stream_index] == 0) {
             pts_start_from[packet.stream_index] = packet.pts;
-            __android_log_print(ANDROID_LOG_INFO, TAG, "pts_start_from: %s", av_ts2str(pts_start_from[packet.stream_index]));
+            __android_log_print(ANDROID_LOG_INFO, TAG, "pts_start_from: %d", av_ts2str(pts_start_from[packet.stream_index]));
         }
 
         //拷贝数据包Packet对象(视频存储的单元)
@@ -243,10 +243,126 @@ int cut_video(double from_seconds, double end_seconds, const char* in_filename, 
 }
 
 /**
+ * 剪切视频并转码
+ * @param starttime  开始时间
+ * @param endtime   结束时间
+ * @param in_filename   原视频的路径(包含文件名)
+ * @param out_filename  裁剪结果的存放路径(包含文件名)
+ * @return  如果成功则返回0，否则返回其他
+ */
+int convert_and_cut(float starttime, float endtime, char *in_filename, char *out_filename) {
+    AVCodecContext *inCodecContext = NULL;
+    AVCodecContext *outCodecContext = NULL;
+
+    AVFormatContext *inFormatContext = NULL;
+    AVFormatContext *outFormatContext = NULL;
+
+    //int inVideoStreamIndex = -1;
+    AVStream *inVideoStream = NULL;
+    int ret = 0;
+
+    //1、读取视频文件
+    av_register_all();
+    if ((ret = avformat_open_input(&inFormatContext, in_filename, 0, 0)) < 0) {
+        __android_log_print(ANDROID_LOG_ERROR, TAG, "Could not open input file '%s'", in_filename);
+        goto error;
+    }
+
+    //2、创建输出对象
+    avformat_alloc_output_context2(&outFormatContext, NULL, NULL, out_filename);
+
+    //3、根据输入流设置相应的输出流参数（不发生转码）
+    LOGI("%s", "根据输入流设置相应的输出流参数（不发生转码）");
+    for (int i = 0; i < inFormatContext->nb_streams; i++) {
+        inVideoStream = inFormatContext->streams[i];
+        AVStream *out_stream = avformat_new_stream(outFormatContext, NULL);
+        if (!out_stream) {
+            LOGE("%s", "Failed to create output stream\n");
+            ret = AVERROR_UNKNOWN;
+            goto error;
+        }
+
+        if((ret = avcodec_parameters_copy(out_stream->codecpar, inVideoStream->codecpar)) < 0){
+            LOGE("%s", "Failed to codecpar from input to output stream codecpar\n");
+            goto error;
+        }
+
+        out_stream->codecpar->codec_tag = 0;
+
+    }
+
+    AVFrame *frame;
+    AVPacket inPacket, outPacket;
+
+    if((ret = avio_open(&outFormatContext->pb, in_filename, AVIO_FLAG_WRITE)) < 0) {
+        fprintf(stderr, "convert(): cannot open out file\n");
+        goto error;
+    }
+
+    //4、移动到裁剪的起点
+    AVRational default_timebase;
+    default_timebase.num = 1;
+    default_timebase.den = AV_TIME_BASE;
+
+    // suppose you have access to the "inVideoStream" of course
+    int64_t starttime_int64 = av_rescale_q((int64_t)( starttime * AV_TIME_BASE ), default_timebase, inVideoStream->time_base);
+    int64_t endtime_int64 = av_rescale_q((int64_t)( endtime * AV_TIME_BASE ), default_timebase, inVideoStream->time_base);
+
+    if(avformat_seek_file(inFormatContext, inVideoStreamIndex, INT64_MIN, starttime_int64, INT64_MAX, 0) < 0) {
+        ret = AVERROR_UNKNOWN;
+        goto error;
+    }
+
+    avcodec_flush_buffers( inVideoStream->codec );
+    // END
+
+    avformat_write_header(outFormatContext, NULL);
+    frame = av_frame_alloc();
+    av_init_packet(&inPacket);
+
+    int frameFinished = -1;
+    int outputed = -1;
+
+    // you used avformat_seek_file() to seek CLOSE to the point you want... in order to give precision to your seek,
+    // just go on reading the packets and checking the packets PTS (presentation timestamp)
+    while(av_read_frame(inFormatContext, &inPacket) >= 0) {
+        if(inPacket.stream_index == inVideoStreamIndex) {
+            avcodec_decode_video2(inCodecContext, frame, &frameFinished, &inPacket);
+            // this line guarantees you are getting what you really want.
+            if(frameFinished && frame->pts >= starttime_int64 && frame->pts <= endtime_int64) {
+                av_init_packet(&outPacket);
+                avcodec_encode_video2(outCodecContext, &outPacket, frame, &outputed);
+                if(outputed) {
+                    if (av_write_frame(outFormatContext, &outPacket) != 0) {
+                        fprintf(stderr, "convert(): error while writing video frame\n");
+                        return 0;
+                    }
+                }
+                av_packet_unref(&outPacket);
+            }
+
+            // exit the loop if you got the frames you want.
+            if(frame->pts > endtime_int64) {
+                break;
+            }
+        }
+    }
+
+    av_write_trailer(outFormatContext);
+    av_packet_unref(&inPacket);
+    goto end;
+    error:
+    error(ret);
+    return -1;
+    end:
+    return 1;
+}
+
+/**
  * 无损压缩视频
  * @param in_filename   原视频路径(包含文件名)
  * @param out_filename  压缩结果存放路径(包含文件名)
- * @return
+ * @return  如果成功则返回0，否则返回其他
  */
 int remuxing(const char *in_filename, const char *out_filename)
 {
@@ -297,8 +413,7 @@ int remuxing(const char *in_filename, const char *out_filename)
             ret = AVERROR_UNKNOWN;
             goto end;
         }
-        ret = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
-        if (ret < 0) {
+        if ((ret = avcodec_parameters_copy(out_stream->codecpar, in_codecpar)) < 0) {
             __android_log_print(ANDROID_LOG_ERROR, TAG, "Failed to copy codec parameters\n");
             goto end;
         }
