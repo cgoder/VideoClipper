@@ -10,6 +10,7 @@ extern "C" {
 #include <libavutil/timestamp.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/avstring.h>
 };
 #endif //VIDEOCLIPPER_NATIVE_LIB_H
 #define TAG "native_tag"
@@ -18,6 +19,8 @@ extern "C" {
 
 extern "C"
 {
+
+long start_time;
 
 JNIEXPORT void JNICALL
 Java_com_wzjing_videoclipper_MainActivity_clipVideo(JNIEnv *env, jobject instance,
@@ -30,7 +33,7 @@ Java_com_wzjing_videoclipper_MainActivity_remuxVideo(JNIEnv *env, jobject instan
 
 int cut_video(double starttime, double endtime, const char *in_filename, const char *out_filename);
 
-int convert_and_cut(float starttime, float endtime, char *in_filename, char *out_filename);
+int convert_and_cut(float starttime, float endtime, const char *in_filename, const char *out_filename);
 
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const char *tag);
 
@@ -38,6 +41,8 @@ int remuxing(const char *in_filename, const char *out_filename);
 
 void error(int error_code);
 
-void toast(JNIEnv* env, jobject instance, const char* message);
+void toast(JNIEnv* env, char* message);
+
+void dump_meta(AVDictionary *m, const char *indent);
 
 };

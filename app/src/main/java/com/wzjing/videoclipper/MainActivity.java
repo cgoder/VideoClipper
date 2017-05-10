@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.cutVideoFloatingActionButton)
     public void cutVideo() {
         if (inputVideo != null && outputVideo != null)
-            clipVideo(0d, 5d, inputVideo.getAbsolutePath(), outputVideo.getAbsolutePath());
+            clipVideo(10d, 20d, inputVideo.getAbsolutePath(), outputVideo.getAbsolutePath());
     }
 
     @OnClick(R.id.remuxingFloatingActionButton)
