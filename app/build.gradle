@@ -28,6 +28,8 @@ android {
         }
         debug {
             ext.enableCrashlytics = false
+            debuggable true
+            jniDebuggable true
         }
     }
 

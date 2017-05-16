@@ -14,13 +14,15 @@ extern "C" {
 };
 #endif //VIDEOCLIPPER_NATIVE_LIB_H
 #define TAG "native_tag"
+#define LOGD(format, ...) __android_log_print(ANDROID_LOG_INFO, TAG, format, ## __VA_ARGS__)
 #define LOGI(format, ...) __android_log_print(ANDROID_LOG_INFO, TAG, format, ## __VA_ARGS__)
+#define LOGW(format, ...) __android_log_print(ANDROID_LOG_WARN, TAG, format, ## __VA_ARGS__)
 #define LOGE(format, ...) __android_log_print(ANDROID_LOG_ERROR, TAG, format, ## __VA_ARGS__)
+
+long start_time;
 
 extern "C"
 {
-
-long start_time;
 
 JNIEXPORT void JNICALL
 Java_com_wzjing_videoclipper_MainActivity_clipVideo(JNIEnv *env, jobject instance,
@@ -30,6 +32,7 @@ Java_com_wzjing_videoclipper_MainActivity_clipVideo(JNIEnv *env, jobject instanc
 JNIEXPORT void JNICALL
 Java_com_wzjing_videoclipper_MainActivity_remuxVideo(JNIEnv *env, jobject instance,
                                                      jstring inFileName_, jstring outFileName_);
+};
 
 int cut_video(double starttime, double endtime, const char *in_filename, const char *out_filename);
 
@@ -41,8 +44,4 @@ int remuxing(const char *in_filename, const char *out_filename);
 
 void error(int error_code);
 
-void toast(JNIEnv* env, char* message);
-
-void dump_meta(AVDictionary *m, const char *indent);
-
-};
+void toast(JNIEnv* env, const char* message);

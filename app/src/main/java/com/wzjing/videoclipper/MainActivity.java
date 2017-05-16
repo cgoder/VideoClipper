@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.MediaController;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -33,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.openFileFloatingActionButton)
     FloatingActionButton openFab;
 
+
     private File inputVideo, outputVideo;
 
     @Override
@@ -40,9 +42,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        MediaController controller = new MediaController(this);
-        videoView.setMediaController(controller);
-
+//        videoView.setMediaController(controller);
 
         String state = Environment.getExternalStorageState();
         if (!Environment.MEDIA_MOUNTED.equals(state)) {
@@ -57,8 +57,8 @@ public class MainActivity extends AppCompatActivity {
         outputVideo = new File(inputVideo.getParent(), "simple_clip.mp4");
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         retriever.setDataSource(inputVideo.getPath());
-        int vw = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
-        int vh = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
+        int vw = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));
+        int vh = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));
         Log.i(TAG, String.format("Video Spec:%d x %d", vw, vh));
         ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) videoView.getLayoutParams();
         DisplayMetrics metrics = getResources().getDisplayMetrics();
@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
         }
         Log.i(TAG, String.format("params:%d x %d", params.width, params.height));
         videoView.setLayoutParams(params);
+
         videoView.setVideoPath(inputVideo.getPath());
         videoView.start();
     }
